@@ -1,6 +1,6 @@
 # Dejanews.pm
 # Copyright (C) 1998 by Martin Thurn
-# $Id: Dejanews.pm,v 1.20 2000/03/09 15:30:04 mthurn Exp $
+# $Id: Dejanews.pm,v 1.21 2000/03/20 20:58:33 mthurn Exp $
 
 =head1 NAME
 
@@ -91,25 +91,33 @@ MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 
 =head1 VERSION HISTORY
 
+=head2 2.11, 2000-03-20
+
+What a difference a space makes!  www.deja.com mucked with spaces in the output.
+
+=head2 2.10, 2000-03-09
+
+Fixed for new output format; updated test cases.
+
 =head2 2.08, 2000-02-24
 
-fix for date-range-, subject-, groups-limited searches
+fix for date-range-, subject-, groups-limited searches.
 
 =head2 2.07, 2000-01-18
 
-handle www.deja.com's new output format
+Handle www.deja.com's new output format.
 
 =head2 2.06, 1999-12-07
 
-new test cases, pod update, ignore deja links, etc.
+New test cases, pod update, ignore deja links, etc.
 
 =head2 2.04, 1999-12-06
 
-handle www.deja.com's new output format
+Handle www.deja.com's new output format.
 
 =head2 2.03, 1999-10-05
 
-now uses hash_to_cgi_string()
+Now uses hash_to_cgi_string().
 
 =head2 2.02, 1999-09-17
 
@@ -150,7 +158,7 @@ require Exporter;
 @EXPORT_OK = qw();
 @ISA = qw(WWW::Search Exporter);
 
-$VERSION = '2.10';
+$VERSION = '2.11';
 $MAINTAINER = 'Martin Thurn <MartinThurn@iname.com>';
 
 # use Carp ();
@@ -245,7 +253,7 @@ sub native_retrieve_some
     next LINE_OF_INPUT if m/^\s*$/; # short circuit for blank lines
     print STDERR " *   $state ===$_===" if 2 <= $self->{'_debug'};
     if ($state eq $START && 
-        m=\d\sof\s(?:about|exactly)?\s(\d+)\smatches=)
+        m=\d\sof\s(?:(?:about|exactly)\s)?(\d+)\smatches=)
       {
       # Actual lines of input:
       #         <font face=arial,helvetica size=-1>messages 1-100 of about 2500000 matches</font>
@@ -303,6 +311,7 @@ sub native_retrieve_some
       if (m/\076Power\ssearch\074/i)
         {
         $state = $ALLDONE;
+        print STDERR "\n" if 2 <= $self->{'_debug'};
         last LINE_OF_INPUT;
         } # if
       next LINE_OF_INPUT if (m/(Save|Track)\sthis\ssearch/i);
@@ -310,6 +319,7 @@ sub native_retrieve_some
       if (m/linkback\.xp/)
         {
         $state = $ALLDONE;
+        print STDERR "\n" if 2 <= $self->{'_debug'};
         last LINE_OF_INPUT;
         } # if
       print STDERR "hit url line\n" if 2 <= $self->{'_debug'};

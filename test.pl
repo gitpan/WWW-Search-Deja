@@ -96,7 +96,9 @@ else
 
 # This query returns 1 page of results:
 $iTest++;
-$oSearch->native_query('irov'.'er');
+$oSearch->native_query('irov'.'er',
+                       # { 'search_debug' => 2, },
+                      );
 @aoResults = $oSearch->results();
 $iResults = scalar(@aoResults);
 if ((2 <= $iResults) && ($iResults <= 99))
@@ -112,7 +114,6 @@ else
 # This query returns 2 pages of results:
 $iTest++;
 $oSearch->native_query('L'.'ili AND Le'.'dy',
-                       # { 'search_debug' => 2, },
                       );
 @aoResults = $oSearch->results();
 $iResults = scalar(@aoResults);

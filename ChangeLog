@@ -1,6 +1,16 @@
+2000-03-20  Kingpin  <mthurn@tasc.com>
+
+	* Dejanews.pm: updated to 2.11 (what a difference a space makes)
+
+2000-03-10  Kingpin  <mthurn@tasc.com>
+
+	* VERSION 2.10 RELEASED
+	
 2000-03-09  Kingpin  <mthurn@tasc.com>
 
 	* Dejanews.pm: udpated to 2.10 (new output format)
+	
+	* test.pl: various small cosmetic changes
 
 2000-02-26  Kingpin  <mthurn@tasc.com>
 
