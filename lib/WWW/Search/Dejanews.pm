@@ -1,6 +1,6 @@
 # Dejanews.pm
 # Copyright (C) 1998 by Martin Thurn
-# $Id: Dejanews.pm,v 1.21 2000/03/20 20:58:33 mthurn Exp $
+# $Id: Dejanews.pm,v 1.25 2000/06/23 14:44:40 mthurn Exp $
 
 =head1 NAME
 
@@ -32,8 +32,7 @@ insert 'AND' between all the query terms in your query string:
 
   $oSearch->native_query(escape_query('Dorothy AND Toto AND Oz'));
 
-or call
-native_query like this:
+or, call native_query like this:
 
   $oSearch->native_query(escape_query('Dorothy Toto Oz'), {'defaultOp' => 'AND'} );
 
@@ -57,12 +56,6 @@ and author's name (as reported by www.deja.com) in the following
 format: "Newsgroup: comp.lang.perl; Author: Martin Thurn"
 
 =head1 CAVEATS
-
-Names of newsgroups ("forums") are unceremoniously truncated to 21
-characters by www.deja.com.
-
-Titles ("Subject:" line of messages) are unceremoniously truncated to 28
-characters by www.deja.com.
 
 =head1 SEE ALSO
 
@@ -90,6 +83,14 @@ WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
 MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 
 =head1 VERSION HISTORY
+
+=head2 2.13, 2000-06-23
+
+titles, forums, and authors are no longer truncated
+
+=head2 2.12, 2000-05-22
+
+short-circuit if explicitly no results returned
 
 =head2 2.11, 2000-03-20
 
@@ -158,7 +159,7 @@ require Exporter;
 @EXPORT_OK = qw();
 @ISA = qw(WWW::Search Exporter);
 
-$VERSION = '2.11';
+$VERSION = '2.13';
 $MAINTAINER = 'Martin Thurn <MartinThurn@iname.com>';
 
 # use Carp ();
@@ -193,6 +194,8 @@ sub native_setup_search
                          'defaultOp' => 'OR',
                          'maxhits' => $self->{'_hits_per_page'},
                          'showsort' => 'score',
+                         'format' => 'delta',
+                         'svcclass' => 'dnserver',
                         };
     } # if
 
@@ -236,7 +239,7 @@ sub native_retrieve_some
   if (!$response->is_success) 
     {
     return undef;
-    };
+    }
 
   print STDERR " *   got response\n" if $self->{'_debug'};
   $self->{'_next_url'} = undef;
@@ -252,6 +255,16 @@ sub native_retrieve_some
     {
     next LINE_OF_INPUT if m/^\s*$/; # short circuit for blank lines
     print STDERR " *   $state ===$_===" if 2 <= $self->{'_debug'};
+    if ($state eq $START && 
+        m=^No\sMatches&nbsp;$=)
+      {
+      # Actual line of input:
+      # No Matches&nbsp;
+      print STDERR "no matches\n" if 2 <= $self->{'_debug'};
+      $self->{'_next_url'} = undef;
+      $self->approximate_result_count(0);
+      return 0;
+      }
     if ($state eq $START && 
         m=\d\sof\s(?:(?:about|exactly)\s)?(\d+)\smatches=)
       {
@@ -276,13 +289,19 @@ sub native_retrieve_some
       # indeed more results for us to go after next time.
       $self->{_next_url} = $1;
       $self->{'_next_to_retrieve'} += $self->{'_hits_per_page'};
-      $state = $HITS;
-      next LINE_OF_INPUT;
+      $state = $ALLDONE;
+      last LINE_OF_INPUT;
       }
-    elsif ($state eq $HITS && m!<td>(\d+/\d+/\d+)</td>!)
+    elsif ($state eq $HITS && m!!)
+      {
+      # Actual line of input is:
+      # 
+      }
+    elsif ($state eq $HITS && m!<td>\s*(\d+/\d+/\d+)\s*</td>!)
       {
       # Actual line of input is:
       #     <td>12/05/1999</td>
+      # <td>05/01/2000 </td>
       print STDERR " date\n" if 2 <= $self->{'_debug'};
       $sDate = $1;
       $state = $URL;
@@ -307,6 +326,14 @@ sub native_retrieve_some
     elsif ((($state eq $URL) || ($state eq $HITS)) && 
            m|<a\shref=\"?([^\">]+)\"?>([^<]+)?|i)
       {
+      # Actual lines of input:
+      # <td align=left><a href=http://x10.deja.com/getdoc.xp?AN=365996516&CONTEXT=899408575.427622419&hitnum=8><b>Stuffed Chewbacca</b></a><br>
+      # <font face="geneva,arial" size=2 color="#999999">Previous matches</font></b>
+      # For a more detailed search go to <a href="http://www.deja.com/home_ps.shtml?QRY=perlcom">Power Search</a></font></td>
+      #     <a href="http://x44.deja.com/getdoc.xp?AN=546934725&CONTEXT=944500768.1493827592&hitnum=92">
+      # <font face="geneva,arial" size=2><a href="http://x64.deja.com/getdoc.xp?AN=633623052&CONTEXT=961769835.905773198&hitnum=0">Re: Boba Fett at Kenner?</font></a><br>
+      my $sURL = $1 . '&fmt=raw';
+      my $sTitle = $2 || '';
       next LINE_OF_INPUT if m!Previous(\074/A\076|\s(matches|messages))!i;
       if (m/\076Power\ssearch\074/i)
         {
@@ -323,25 +350,21 @@ sub native_retrieve_some
         last LINE_OF_INPUT;
         } # if
       print STDERR "hit url line\n" if 2 <= $self->{'_debug'};
-      # Actual lines of input:
-      # <td align=left><a href=http://x10.deja.com/getdoc.xp?AN=365996516&CONTEXT=899408575.427622419&hitnum=8><b>Stuffed Chewbacca</b></a><br>
-      # <font face="geneva,arial" size=2 color="#999999">Previous matches</font></b>
-      # For a more detailed search go to <a href="http://www.deja.com/home_ps.shtml?QRY=perlcom">Power Search</a></font></td>
-      #     <a href="http://x44.deja.com/getdoc.xp?AN=546934725&CONTEXT=944500768.1493827592&hitnum=92">
-      my $sURL = $1 . '&fmt=raw';
       if (ref($hit))
         {
         $hit->description($sDescription);
         push(@{$self->{cache}}, $hit);
         $sDescription = '';
-        }
+        } # if
       $hit = new WWW::SearchResult;
       $hit->add_url($sURL);
+      $hit->title($sTitle);
       $hit->change_date($sDate) if $sDate ne '';
       $sDate = '';
       $self->{'_num_hits'}++;
       $hits_found++;
-      $state = $TITLE;
+      $state = $FORUM;
+      $state = $TITLE if $sTitle eq '';
       }
 
     elsif ($state eq $TITLE)
@@ -358,26 +381,36 @@ sub native_retrieve_some
       $state = $FORUM;
       } # if TITLE
 
-    elsif ($state eq $FORUM &&
-           m|<td><b>([-_0-9a-zA-Z. ]+)</b></td>|i)
+    elsif (($state eq $FORUM) &&
+           (m|<td><b>([-_0-9a-zA-Z. ]+)</b></td>|i
+            ||
+            m!<b>Forum</b>: (.+?)<br>!))
       {
       print STDERR "forum\n" if 2 <= $self->{'_debug'};
-      # Actual line of input is:
+      # Actual lines of input are:
       #     <td>rec.arts.sf.starwars.</td>
       #     <td><b>3dfx.products.voodoob</b></td>
+      # <b>Forum</b>: rec.arts.sf.starwars.collecting.vintage<br>
       my $sForum = $1;
       $sForum =~ s/\s+$//;  # delete trailing whitespace
       $sDescription .= "Newsgroup: $sForum";
       $state = $AUTHOR;
       }
-    elsif ($state eq $AUTHOR && m|\">(.*?)</a>|i)
+    elsif (($state eq $AUTHOR) && 
+           (m|\">(junk)(.*?)</a>|i
+            ||
+            m!<b>Date</b>: (\S+) <b>Author</b>: (.+)\Z!))
       {
-      # Actual line of input is:
+      # Actual lines of input are:
       #     <td><a href="profile.xp?author=315f0ddb1fd3416693f002e3662d9640ae3e4d3b2bceb4bf6eb0da6a80c070068f1069a1e792e4577e8fd9a49eb1d898171e5ed278071e92d5&ST=QS&ee=1">ceasar         </a></td>
+      # <b>Date</b>: 2000/06/12 <b>Author</b>: Kingpin
       print STDERR "author\n" if 2 <= $self->{'_debug'};
-      my $sAuthor = $1;
+      my $sAuthor = $+ || 'unknown';
+      $sDate = $1 || '';
       $sAuthor =~ s/\s+$//;  # delete trailing spaces
       $sDescription .= "; Author: $sAuthor";
+      $hit->change_date($sDate) if $sDate ne '';
+      $sDate = '';
       $state = $HITS;
       } # line is end of description
 

@@ -31,14 +31,17 @@ print "ok $iTest\n"; # 2
 
 use WWW::Search::Test;
 
+my $iDebug = 0;
+
 # Now test the groups- and date-limited search:
-$oSearch->native_query('learning+five',
+my $sQuery = 'learning five';
+$oSearch->native_query(WWW::Search::escape_query($sQuery),
                        {
-                        'fromdate' => 'Jan+1+1999',
-                        'todate' => 'Feb+1+1999',
+                        'fromdate' => 'Apr+1+2000',
+                        'todate' => 'May+1+2000',
                         'groups' => 'rec.juggling',
                         'defaultOp' => 'AND',
-                        # 'search_debug' => 2,
+                        'search_debug' => $iDebug,
                        }
                       );
 @aoResults = $oSearch->results();
@@ -46,14 +49,14 @@ $oSearch->native_query('learning+five',
 $iTest++;
 $iResults = scalar(@aoResults);
 # print STDERR " $iResults juggling results\n";
-if ((0 < $iResults) && ($iResults < 10))
+if ((10 < $iResults) && ($iResults < 20))
   {
   print "ok $iTest\n"; # 3
   }
 else
   {
   print "not ok $iTest\n";
-  print STDERR " --- got $iResults results, expected 1..9 for the juggling query\n";
+  print STDERR " --- got $iResults results for $sQuery with date-range, expected 11..19\n";
   }
 # Now make sure we got titles:
 $iTest++;
@@ -61,6 +64,21 @@ $iOK = 0;
 foreach my $oResult (@aoResults)
   {
   $iOK = 1 if $oResult->title ne '';
+  if ($iDebug)
+    {
+    my $sDesc = $oResult->description || '';
+    my $sTitle = $oResult->title || '';
+    my $sCompany = $oResult->company || '';
+    my $sLocation = $oResult->location || '';
+    my $sSource = $oResult->source || '';
+    printf " + %0.3d. %s\n", $i++, $oResult->url;
+    printf "        upd=%s, len=%s, sco=%s\n", $oResult->change_date, $oResult->size, $oResult->score;
+    print "        ttl=$sTitle\n";
+    print "        dsc=$sDesc\n";
+    print "        co.=$sCompany\n" if $sCompany ne '';
+    print "        loc=$sLocation\n" if $sLocation ne '';
+    print "        src=$sSource\n" if $sSource ne '';
+    } # if
   } # foreach
 print $iOK ? "ok $iTest\n" : "not ok $iTest\n"; # 4
 # Now make sure we got forums & authors:
@@ -96,7 +114,8 @@ else
 
 # This query returns 1 page of results:
 $iTest++;
-$oSearch->native_query('irov'.'er',
+my $sQuery = 'irover';
+$oSearch->native_query(WWW::Search::escape_query($sQuery),
                        # { 'search_debug' => 2, },
                       );
 @aoResults = $oSearch->results();
@@ -108,12 +127,18 @@ if ((2 <= $iResults) && ($iResults <= 99))
 else
   {
   print "not ok $iTest\n";
-  print STDERR " --- got $iResults results, expected 2..99 for the irover query\n";
+  print STDERR " --- got $iResults results for $sQuery, expected 2..99\n";
   }
 
 # This query returns 2 pages of results:
 $iTest++;
-$oSearch->native_query('L'.'ili AND Le'.'dy',
+# print STDERR <<"ENDNOTE";
+# NOTE: As of 2000-05-20, the following test is known to fail
+# because www.deja.com has a portion of their database off-line.
+# ENDNOTE
+# print "skip $iTest\n";
+my $sQuery = 'L'.'ili AND Le'.'dy';
+$oSearch->native_query(WWW::Search::escape_query($sQuery),
                       );
 @aoResults = $oSearch->results();
 $iResults = scalar(@aoResults);
@@ -124,12 +149,14 @@ if ((101 <= $iResults) && ($iResults <= 199))
 else
   {
   print "not ok $iTest\n";
-  print STDERR " --- got $iResults results, expected 101..199 for the Lili Ledy query\n";
+  print STDERR " --- got $iResults results for $sQuery, expected 101..199\n";
   }
 
 # This query returns 3 pages of results:
 $iTest++;
-$oSearch->native_query('Jabb'.'a');
+my $sQuery = 'Jabba';
+$oSearch->native_query(WWW::Search::escape_query($sQuery),
+                      );
 $oSearch->maximum_to_retrieve(209);
 @aoResults = $oSearch->results();
 $iResults = scalar(@aoResults);
@@ -140,6 +167,6 @@ if (201 <= $iResults)
 else
   {
   print "not ok $iTest\n";
-  print STDERR " --- got $iResults results, expected 201.. for the Jabba query\n";
+  print STDERR " --- got $iResults results for $sQuery, expected 201..\n";
   }
 
