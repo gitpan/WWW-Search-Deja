@@ -1,6 +1,6 @@
 # Dejanews.pm
 # Copyright (C) 1998 by Martin Thurn
-# $Id: Dejanews.pm,v 1.27 2000/07/17 19:00:53 mthurn Exp $
+# $Id: Dejanews.pm,v 1.28 2001/01/31 18:03:19 mthurn Exp $
 
 =head1 NAME
 
@@ -165,7 +165,7 @@ require Exporter;
 @EXPORT_OK = qw();
 @ISA = qw(WWW::Search Exporter);
 
-$VERSION = '2.14';
+$VERSION = '2.15';
 $MAINTAINER = 'Martin Thurn <MartinThurn@iname.com>';
 
 # use Carp ();
@@ -187,9 +187,14 @@ sub native_setup_search
   $self->{'_next_to_retrieve'} = 0;
   $self->{'_num_hits'} = 0;
 
-  if (!defined($self->{_options})) 
+  if (defined($self->{_options}))
+    {
+    # print STDERR " +   Dejanews.pm is NOT installing default options...\n";
+    }
+  else
     {
     # These are the defaults:
+    # print STDERR " +   Dejanews.pm is installing default options...\n";
     $self->{_options} = {
                          'search_url' => 'http://www.deja.com/qs.xp',
                          'DBS' => 1,
@@ -206,9 +211,9 @@ sub native_setup_search
     } # if
 
   # Copy in options passed in the argument list:
-  if (defined($rhOptions)) 
+  if (defined($rhOptions))
     {
-    foreach (keys %$rhOptions) 
+    foreach (keys %$rhOptions)
       {
       $self->{'_options'}->{$_} = $rhOptions->{$_};
       } # foreach
@@ -231,21 +236,21 @@ sub native_setup_search
 sub native_retrieve_some
   {
   my ($self) = @_;
-  
+
   # Fast exit if already done:
   return undef unless defined($self->{_next_url});
-  
+
   # If this is not the first page of results, sleep so as to not overload the server:
   $self->user_agent_delay if 1 < $self->{'_next_to_retrieve'};
-  
+
   # Get some results, adhering to the WWW::Search mechanism:
   print STDERR " *   sending request (",$self->{_next_url},")\n" if $self->{'_debug'};
   my $response = $self->http_request('GET', $self->{_next_url});
   $self->{response} = $response;
-  if (!$response->is_success) 
+  if (!$response->is_success)
     {
     return undef;
-    }
+    } # if
 
   print STDERR " *   got response\n" if $self->{'_debug'};
   $self->{'_next_url'} = undef;
@@ -257,7 +262,7 @@ sub native_retrieve_some
   my $sDate = '';
   # The fields of each record appear in the following order: DATE, URL, TITLE, FORUM, AUTHOR
  LINE_OF_INPUT:
-  foreach ($self->split_lines($response->content())) 
+  foreach ($self->split_lines($response->content()))
     {
     next LINE_OF_INPUT if m/^\s*$/; # short circuit for blank lines
     print STDERR " *   $state ===$_===" if 2 <= $self->{'_debug'};
@@ -329,7 +334,7 @@ sub native_retrieve_some
 #        $state = $URL;
 #        } #
 
-    elsif ((($state eq $URL) || ($state eq $HITS)) && 
+    elsif ((($state eq $URL) || ($state eq $HITS)) &&
            m|<a\shref=\"?([^\">]+)\"?>([^<]+)?|i)
       {
       # Actual lines of input:
@@ -402,7 +407,7 @@ sub native_retrieve_some
       $sDescription .= "Newsgroup: $sForum";
       $state = $AUTHOR;
       }
-    elsif (($state eq $AUTHOR) && 
+    elsif (($state eq $AUTHOR) &&
            (m|\">(junk)(.*?)</a>|i
             ||
             m!<b>Date</b>: (\S+) <b>Author</b>: (.+)\Z!))
@@ -431,12 +436,12 @@ sub native_retrieve_some
     # End, no other pages (missed some tag somewhere along the line?)
     $self->{_next_url} = undef;
     }
-  if (ref($hit)) 
+  if (ref($hit))
     {
     $hit->description($sDescription);
     push(@{$self->{cache}}, $hit);
     }
-  
+
   return $hits_found;
   } # native_retrieve_some
 
@@ -465,6 +470,8 @@ new power search URL 1999-12-06:
 http://www.deja.com/[ST_rn=ps]/qs.xp?ST=PS&svcclass=dnyr&QRY=boba+fett&defaultOp=OR&DBS=1&OP=dnquery.xp&LNG=ALL&subjects=&groups=&authors=&fromdate=&todate=&showsort=score&maxhits=100
 
 http://bx6.deja.com/=dnc/[ST_rn=ps]/qs.xp?ST=PS&svcclass=dnyr&QRY=learning+five&defaultOp=AND&DBS=1&OP=dnquery.xp&LNG=ALL&subjects=&groups=rec.juggling&authors=&fromdate=Jan+1+1999&todate=Feb+1+1999&showsort=score&maxhits=25&uniq=951403948.2133590055
+
+http://www.deja.com/[ST_rn=ps]/qs.xp?ST=PS&svcclass=dnyr&firstsearch=yes&show_preserve=on&QRY=learning+five&defaultOp=OR&DBS=1&OP=dnquery.xp&LNG=english&subjects=&groups=juggling&authors=&fromdate=jun+1+1999&todate=jul+1+1999&showsort=score&maxhits=25
 
 simplest:
 

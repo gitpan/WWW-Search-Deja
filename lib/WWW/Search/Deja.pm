@@ -1,6 +1,6 @@
 # Deja.pm
 # Copyright (c) 1998 by Martin Thurn
-# $Id: Deja.pm,v 1.2 2000/02/24 14:44:41 mthurn Exp $
+# $Id: Deja.pm,v 1.3 2001/01/31 17:58:12 mthurn Exp $
 
 =head1 NAME
 
@@ -44,11 +44,6 @@ package WWW::Search::Deja;
 
 require WWW::Search::Dejanews;
 @ISA = qw(WWW::Search::Dejanews);
-
-$VERSION = '2.05';
-
-$MAINTAINER = 'Martin Thurn <MartinThurn@iname.com>';
-$TEST_CASES = '1';
 
 # ALL the work is done by Dejanews.pm!
 
