@@ -5,7 +5,7 @@ WriteMakefile(
               'NAME'	=> 'WWW::Search::Deja',
               'VERSION_FROM' => 'lib/WWW/Search/Dejanews.pm', # finds $VERSION
               'PREREQ_PM' => {
-                              'WWW::Search' => 2.09,
+                              'WWW::Search' => 2.10,
                              },
              );
 

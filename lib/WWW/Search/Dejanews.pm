@@ -1,6 +1,6 @@
 # Dejanews.pm
 # Copyright (C) 1998 by Martin Thurn
-# $Id: Dejanews.pm,v 1.17 2000/02/24 16:29:19 mthurn Exp $
+# $Id: Dejanews.pm,v 1.19 2000/02/25 17:35:02 mthurn Exp $
 
 =head1 NAME
 
@@ -39,15 +39,16 @@ native_query like this:
 
 The URLs returned point to "text only" articles from Dejanews' server.
 
-If you want to search particular fields, add the escaped query for
+If you want to search particular fields, add the escaped value for
 each field to the second argument to native_query:
 
+  my $sFromDate = WWW::Search::escape_query('Jan  1 1999');
+  my $sToDate   = WWW::Search::escape_query('Jan 31 1999');
   $oSearch->native_query($sQuery, 
-                         {'groups'   => 'comp.lang.perl.misc',
-                          'subjects' => 'WWW::Search',
-                          'authors'  => 'thurn',
-                          'fromdate' => 'Jan 1 1997',
-                          'todate'   => 'Dec 31 1997', } );
+                         {'groups'   => 'rec.juggling',
+                          'subjects' => 'learning+five',
+                          'fromdate' => $sFromDate
+                          'todate'   => $sToDate, } );
 
 =head1 NOTES
 
@@ -148,7 +149,7 @@ require Exporter;
 @EXPORT = qw();
 @EXPORT_OK = qw();
 @ISA = qw(WWW::Search Exporter);
-$VERSION = '2.08';
+$VERSION = '2.09';
 
 use Carp ();
 use WWW::Search(generic_option);
@@ -198,7 +199,7 @@ sub native_setup_search
     {
     foreach (keys %$rhOptions) 
       {
-      $self->{'_options'}->{$_} = WWW::Search::escape_query($rhOptions->{$_});
+      $self->{'_options'}->{$_} = $rhOptions->{$_};
       } # foreach
     } # if
 

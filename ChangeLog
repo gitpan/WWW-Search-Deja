@@ -1,3 +1,7 @@
+2000-02-25  Kingpin  <mthurn@tasc.com>
+
+	* Dejanews.pm: updated to 2.09 (do not escape option value)
+
 Revision history for Perl extension WWW::Search::Deja.
 
 2.08  Thu Feb 24 11:18:09 2000
