@@ -1,3 +1,7 @@
+2000-07-17  Kingpin  <mthurn@tasc.com>
+
+	* Dejanews.pm: updated to 2.14 (make the UserAgent non-robotic)
+
 2000-06-23  Kingpin  <mthurn@tasc.com>
 
 	* VERSION 2.13 RELEASED

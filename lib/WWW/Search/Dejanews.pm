@@ -1,10 +1,10 @@
 # Dejanews.pm
 # Copyright (C) 1998 by Martin Thurn
-# $Id: Dejanews.pm,v 1.25 2000/06/23 14:44:40 mthurn Exp $
+# $Id: Dejanews.pm,v 1.27 2000/07/17 19:00:53 mthurn Exp $
 
 =head1 NAME
 
-WWW::Search::Dejanews - class for searching Dejanews 
+WWW::Search::Dejanews - class for searching discussions at www.deja.com
 
 =head1 SYNOPSIS
 
@@ -19,8 +19,8 @@ WWW::Search::Dejanews - class for searching Dejanews
 =head1 DESCRIPTION
 
 This class is a Dejanews specialization of WWW::Search.
-It handles making and interpreting Dejanews searches
-F<http://www.deja.com>.
+It handles making and interpreting searches against Deja discussions archive
+F<http://www.deja.com/usenet>.
 
 This class exports no public interface; all interaction should
 be done through L<WWW::Search> objects.
@@ -35,6 +35,8 @@ insert 'AND' between all the query terms in your query string:
 or, call native_query like this:
 
   $oSearch->native_query(escape_query('Dorothy Toto Oz'), {'defaultOp' => 'AND'} );
+
+The results are sorted by www.deja.com's "confidence" score.
 
 The URLs returned point to "text only" articles from Dejanews' server.
 
@@ -53,7 +55,7 @@ each field to the second argument to native_query:
 
 In the SearchResults, the description field contains the forum name
 and author's name (as reported by www.deja.com) in the following
-format: "Newsgroup: comp.lang.perl; Author: Martin Thurn"
+format: "Newsgroup: comp.lang.perl.modules; Author: Martin Thurn"
 
 =head1 CAVEATS
 
@@ -83,6 +85,10 @@ WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
 MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 
 =head1 VERSION HISTORY
+
+=head2 2.14, 2000-07-17
+
+make the UserAgent non-robotic
 
 =head2 2.13, 2000-06-23
 
@@ -159,7 +165,7 @@ require Exporter;
 @EXPORT_OK = qw();
 @ISA = qw(WWW::Search Exporter);
 
-$VERSION = '2.13';
+$VERSION = '2.14';
 $MAINTAINER = 'Martin Thurn <MartinThurn@iname.com>';
 
 # use Carp ();
@@ -176,7 +182,7 @@ sub native_setup_search
   $self->{'_hits_per_page'} = $DEFAULT_HITS_PER_PAGE;
 
   $self->{agent_e_mail} = 'MartinThurn@iname.com';
-  $self->user_agent(0);
+  $self->user_agent('NON-ROBOT');
 
   $self->{'_next_to_retrieve'} = 0;
   $self->{'_num_hits'} = 0;
