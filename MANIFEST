@@ -1,0 +1,6 @@
+ChangeLog
+MANIFEST
+Makefile.PL
+README
+lib/WWW/Search/Deja.pm
+lib/WWW/Search/Dejanews.pm
