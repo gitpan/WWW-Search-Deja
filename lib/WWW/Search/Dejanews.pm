@@ -1,6 +1,6 @@
 # Dejanews.pm
 # Copyright (C) 1998 by Martin Thurn
-# $Id: Dejanews.pm,v 1.19 2000/02/25 17:35:02 mthurn Exp $
+# $Id: Dejanews.pm,v 1.20 2000/03/09 15:30:04 mthurn Exp $
 
 =head1 NAME
 
@@ -149,19 +149,13 @@ require Exporter;
 @EXPORT = qw();
 @EXPORT_OK = qw();
 @ISA = qw(WWW::Search Exporter);
-$VERSION = '2.09';
 
-use Carp ();
+$VERSION = '2.10';
+$MAINTAINER = 'Martin Thurn <MartinThurn@iname.com>';
+
+# use Carp ();
 use WWW::Search(generic_option);
 require WWW::SearchResult;
-
-$MAINTAINER = 'Martin Thurn <MartinThurn@iname.com>';
-$TEST_CASES = <<"ENDTESTCASES";
-&test('Dejanews', '$MAINTAINER', 'zero', \$bogus_query, \$TEST_EXACTLY);
-&test('Dejanews', '$MAINTAINER', 'one', 'irov'.'er', \$TEST_RANGE, 2,99);
-&test('Dejanews', '$MAINTAINER', 'two', 'L'.'ili AND Le'.'dy', \$TEST_RANGE, 101,199);
-&test('Dejanews', '$MAINTAINER', 'three', 'Jabb'.'a', \$TEST_GREATER_THAN, 201);
-ENDTESTCASES
 
 # private
 sub native_setup_search
@@ -251,30 +245,40 @@ sub native_retrieve_some
     next LINE_OF_INPUT if m/^\s*$/; # short circuit for blank lines
     print STDERR " *   $state ===$_===" if 2 <= $self->{'_debug'};
     if ($state eq $START && 
-        m=[-0-9]+\sof\s(?:about|exactly)\s(\d+)\smatches=)
+        m=\d\sof\s(?:about|exactly)?\s(\d+)\smatches=)
       {
       # Actual lines of input:
       #         <font face=arial,helvetica size=-1>messages 1-100 of about 2500000 matches</font>
       # <b class="small">1-100 of exactly 3545 matches</b>
+      #     1-100 of  400 matches<br>
       print STDERR "count line \n" if 2 <= $self->{'_debug'};
       $self->approximate_result_count($1);
       $state = $HITS;
       } # we're in START mode, and line has number of results
 
     elsif ($state eq $HITS &&
-           m@<a\shref=\"([^\"]+)\">next\s(matches|messages)@i)
+           m@<a\shref=\"([^\"]+)\">Next(\s(matches|messages))?<@i)
       {
       # Actual line of input is:
       # <b><font face="arial,helvetica" size=2><a href="http://x1.deja.com/dnquery.xp?search=next&DBS=1&LNG=ALL&IS=Martin%20Thurn&ST=PS&offsets=db98p4x%02100&svcclass=dnserver&CONTEXT=903630253.1503199236">Next matches</a></font>
       # <span class="small"><a href="http://x33.deja.com/dnquery.xp?search=next&LNG=ALL&IS=boba%20fett&ST=QS&offsets=db99p9%02100&CONTEXT=944504254.1945698352">next messages</a></span>
+      #     <b id=red><A href="http://x44.deja.com/dnquery.xp?search=next&DBS=1&LNG=ALL&IS=Lili%20AND%20Ledy&ST=PS&offsets=db99p8%027%01db99p9%026%01db2000p1%021%01db99p1%025%01db99p10%029%01db99p2%025%01db2000p2%027%01db99p3%0210%01db99p4%021%01db98p6%026%01db99p5%0215%01db99p6%0215%01db98p7%029%01db99p7%024&svcclass=dnserver&CONTEXT=952610485.1765933090">Next</A> &gt;&gt;</b>
       print STDERR " found next button\n" if 2 <= $self->{'_debug'};
       # There is a "next" button on this page, therefore there are
       # indeed more results for us to go after next time.
       $self->{_next_url} = $1;
       $self->{'_next_to_retrieve'} += $self->{'_hits_per_page'};
-      $state = $ALLDONE;
-      last LINE_OF_INPUT;
+      $state = $HITS;
+      next LINE_OF_INPUT;
       }
+    elsif ($state eq $HITS && m!<td>(\d+/\d+/\d+)</td>!)
+      {
+      # Actual line of input is:
+      #     <td>12/05/1999</td>
+      print STDERR " date\n" if 2 <= $self->{'_debug'};
+      $sDate = $1;
+      $state = $URL;
+      } # found DATE
 
 #      elsif ($state eq $HITS &&
 #             m{>(\++)</font>})
@@ -295,7 +299,7 @@ sub native_retrieve_some
     elsif ((($state eq $URL) || ($state eq $HITS)) && 
            m|<a\shref=\"?([^\">]+)\"?>([^<]+)?|i)
       {
-      next LINE_OF_INPUT if m/previous\s(matches|messages)/i;
+      next LINE_OF_INPUT if m!Previous(\074/A\076|\s(matches|messages))!i;
       if (m/\076Power\ssearch\074/i)
         {
         $state = $ALLDONE;
@@ -329,33 +333,28 @@ sub native_retrieve_some
       $hits_found++;
       $state = $TITLE;
       }
-    elsif ($state eq $HITS && m!<td>(\d+/\d+/\d+)</td>!)
-      {
-      # Actual line of input is:
-      #     <td>12/05/1999</td>
-      print STDERR " date\n" if 2 <= $self->{'_debug'};
-      $sDate = $1;
-      $state = $URL;
-      }
 
     elsif ($state eq $TITLE)
       {
+      print STDERR "title\n" if 2 <= $self->{'_debug'};
       if (ref($hit))
         {
         my $sTitle = $_;
         chomp $sTitle;
         $sTitle =~ s/^\s+//;  # delete leading spaces
+        $sTitle =~ s/\s+$//;  # delete trailing spaces
         $hit->title($sTitle);
         } # if
       $state = $FORUM;
       } # if TITLE
 
     elsif ($state eq $FORUM &&
-           m|<td>([^<]+?)</td>|i)
+           m|<td><b>([-_0-9a-zA-Z. ]+)</b></td>|i)
       {
-      print STDERR "forum line\n" if 2 <= $self->{'_debug'};
+      print STDERR "forum\n" if 2 <= $self->{'_debug'};
       # Actual line of input is:
       #     <td>rec.arts.sf.starwars.</td>
+      #     <td><b>3dfx.products.voodoob</b></td>
       my $sForum = $1;
       $sForum =~ s/\s+$//;  # delete trailing whitespace
       $sDescription .= "Newsgroup: $sForum";
@@ -366,7 +365,9 @@ sub native_retrieve_some
       # Actual line of input is:
       #     <td><a href="profile.xp?author=315f0ddb1fd3416693f002e3662d9640ae3e4d3b2bceb4bf6eb0da6a80c070068f1069a1e792e4577e8fd9a49eb1d898171e5ed278071e92d5&ST=QS&ee=1">ceasar         </a></td>
       print STDERR "author\n" if 2 <= $self->{'_debug'};
-      $sDescription .= "; Author: $1";
+      my $sAuthor = $1;
+      $sAuthor =~ s/\s+$//;  # delete trailing spaces
+      $sDescription .= "; Author: $sAuthor";
       $state = $HITS;
       } # line is end of description
 

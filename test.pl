@@ -10,7 +10,8 @@ use ExtUtils::testlib;
 
 BEGIN { $| = 1; print "1..10\n"; }
 END {print "not ok 1\n" unless $loaded;}
-use WWW::Search::Excite;
+use WWW::Search::Deja;
+use WWW::Search::Dejanews;
 $loaded = 1;
 print "ok 1\n";
 
@@ -25,7 +26,7 @@ my $iTest = 2;
 my $sEngine = 'Deja';
 my $oSearch = new WWW::Search($sEngine);
 print ref($oSearch) ? '' : 'not ';
-print "ok $iTest\n";
+print "ok $iTest\n"; # 2
 # $oSearch->{debug} = 9;
 
 use WWW::Search::Test;
@@ -37,6 +38,7 @@ $oSearch->native_query('learning+five',
                         'todate' => 'Feb+1+1999',
                         'groups' => 'rec.juggling',
                         'defaultOp' => 'AND',
+                        # 'search_debug' => 2,
                        }
                       );
 @aoResults = $oSearch->results();
@@ -46,36 +48,37 @@ $iResults = scalar(@aoResults);
 # print STDERR " $iResults juggling results\n";
 if ((0 < $iResults) && ($iResults < 10))
   {
-  print "ok $iTest\n";
+  print "ok $iTest\n"; # 3
   }
 else
   {
   print "not ok $iTest\n";
+  print STDERR " --- got $iResults results, expected 1..9 for the juggling query\n";
   }
 # Now make sure we got titles:
 $iTest++;
-$iOK = 1;
+$iOK = 0;
 foreach my $oResult (@aoResults)
   {
-  $iOK = 0 unless $oResult->title ne '';
+  $iOK = 1 if $oResult->title ne '';
   } # foreach
-print $iOK ? "ok $iTest\n" : "not ok $iTest\n";
+print $iOK ? "ok $iTest\n" : "not ok $iTest\n"; # 4
 # Now make sure we got forums & authors:
 $iTest++;
-$iOK = 1;
+$iOK = 0;
 foreach my $oResult (@aoResults)
   {
-  $iOK = 0 unless $oResult->description ne '';
+  $iOK = 1 if $oResult->description ne '';
   } # foreach
-print $iOK ? "ok $iTest\n" : "not ok $iTest\n";
+print $iOK ? "ok $iTest\n" : "not ok $iTest\n"; # 5
 # Now make sure we got dates:
 $iTest++;
-$iOK = 1;
+$iOK = 0;
 foreach my $oResult (@aoResults)
   {
-  $iOK = 0 unless $oResult->change_date ne '';
+  $iOK = 1 if $oResult->change_date ne '';
   } # foreach
-print $iOK ? "ok $iTest\n" : "not ok $iTest\n";
+print $iOK ? "ok $iTest\n" : "not ok $iTest\n"; # 6
 
 # This test returns no results (but we should not get an HTTP error):
 $iTest++;
@@ -88,7 +91,7 @@ if (0 < $iResults)
   }
 else
   {
-  print "ok $iTest\n";
+  print "ok $iTest\n"; # 7
   }
 
 # This query returns 1 page of results:
@@ -98,25 +101,29 @@ $oSearch->native_query('irov'.'er');
 $iResults = scalar(@aoResults);
 if ((2 <= $iResults) && ($iResults <= 99))
   {
-  print "ok $iTest\n";
+  print "ok $iTest\n"; # 8
   }
 else
   {
   print "not ok $iTest\n";
+  print STDERR " --- got $iResults results, expected 2..99 for the irover query\n";
   }
 
 # This query returns 2 pages of results:
 $iTest++;
-$oSearch->native_query('L'.'ili AND Le'.'dy');
+$oSearch->native_query('L'.'ili AND Le'.'dy',
+                       # { 'search_debug' => 2, },
+                      );
 @aoResults = $oSearch->results();
 $iResults = scalar(@aoResults);
 if ((101 <= $iResults) && ($iResults <= 199))
   {
-  print "ok $iTest\n";
+  print "ok $iTest\n"; # 9
   }
 else
   {
   print "not ok $iTest\n";
+  print STDERR " --- got $iResults results, expected 101..199 for the Lili Ledy query\n";
   }
 
 # This query returns 3 pages of results:
@@ -132,5 +139,6 @@ if (201 <= $iResults)
 else
   {
   print "not ok $iTest\n";
+  print STDERR " --- got $iResults results, expected 201.. for the Jabba query\n";
   }
 
